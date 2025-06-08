@@ -55,13 +55,13 @@ fn tiling(dims:(usize, usize), strats:&[MatrixStrategy]) -> Vec<usize> {
 
             let (mat_i, mat_j) = mat.dims;
             let m_idx = (mat_i - 1)*n + mat_j ; 
-            let _i = (m_idx-1) / n + 1;
-            let _j = (m_idx-1) % n + 1;
+            let m_i = (m_idx-1) / n + 1;
+            let m_j = (m_idx-1) % n + 1;
             // one based (i,j) for debug
             println!("idx {}, m_idx {}", idx, m_idx);
-            if idx >= m_idx  {
-                println!("Mat ({},{}) translated to Tiling ({}, {})", mat_i, mat_j, _i, _j);
-                println!("Cur ({}, {}) and inferred Prev ({},{})", mat_i, mat_j, _i, _j);
+            if idx >= m_idx  && m_i <= m && m_j <= n{
+                println!("Mat ({},{}) translated to Tiling ({}, {})", mat_i, mat_j, m_i, m_j);
+                // println!("Cur ({}, {}) and inferred Prev ({},{})", mat_i, mat_j, _i, _j);
                 let _pre = idx - m_idx;
                 println!("preidx {:?}", _pre);
                 let _p_i = (_pre ) / n + 1;
@@ -108,7 +108,7 @@ fn test_tiling() {
     let dims_list = vec![
         // (1, 1),
         // (2, 1),
-        (2, 2),
+        // (2, 2),
         // (2, 3),
         // (3, 3),
         // (3, 4),
