@@ -102,13 +102,13 @@ fn test_tiling() {
         MatrixStrategy { dims: (1, 1), cost: 2 },
         MatrixStrategy { dims: (1, 2), cost: 3 },
         MatrixStrategy { dims: (2, 1), cost: 3 },
-        // MatrixStrategy { dims: (2, 2), cost: 4 },
+        MatrixStrategy { dims: (2, 2), cost: 4 },
     ];
 
     let dims_list = vec![
         // (1, 1),
-        (2, 1),
-        // (2, 2),
+        // (2, 1),
+        (2, 2),
         // (2, 3),
         // (3, 3),
         // (3, 4),
