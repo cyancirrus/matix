@@ -77,7 +77,7 @@ fn tiling(dims:(usize, usize), strats:&[MatrixStrategy]) -> Vec<usize> {
             }
         }
     }
-    let mut idx = n+1;
+    let mut idx = m*n;
     println!("dp {:?}", dp);
     while idx != 0 {
         println!("----");
