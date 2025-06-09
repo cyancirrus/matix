@@ -1,129 +1,169 @@
 #![allow(dead_code)]
+use std::fmt;
+use std::collections::HashMap;
+
+#[derive(Eq, Clone, Debug)]
+enum Partition {
+    Leaf(Leaf),
+    Node(Node),
+    None,
+}
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-struct MatrixStrategy {
-    dims:(usize,usize),
+struct Leaf {
     cost:usize,
-}
-
-
-#[derive(Eq, PartialEq, Clone)]
-struct Strategy {
+    m:usize,
     n:usize,
-    cost:usize,
 }
 
-impl Strategy {
-    fn new(n:usize, cost:usize) -> Self {
-        Self { n, cost }
-    }
+#[derive(Eq, Clone, Debug)]
+struct Node {
+    cost:usize,
+    transposed:bool,
+    left: Box<Partition>,
+    right:Box<Partition>,
 }
-// fn tiling_1d(n:usize, strats:&[Strategy]) -> Vec<usize> {
-//     // returns reverse strategy
-//     let mut dp:Vec<(usize, usize, usize)> = vec![(0,0,0); n+1];
-//     let mut result:Vec<usize> = Vec::new();
-//     for i in 1..=n {
-//         for (j, s) in strats.iter().enumerate() {
-//             if i >= s.n {
-//                 let (prev_cost, _, _) = dp[i-s.n];
-//                 let (curr_cost, _, _) = dp[i];
-//                 if prev_cost + s.cost < curr_cost || curr_cost == 0 {
-//                     dp[i] = (prev_cost + s.cost, i - s.n, j);
-//                 }
-//             }
-//         }
+
+
+// impl fmt::Debug for Partition {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "Partition {{ cost: {} }}", self.cost())
 //     }
-//     let mut idx = n;
-//     loop {
-//         let (_, pre_idx, s_idx) = dp[idx];
-//         result.push(s_idx);
-//         idx = pre_idx;
-//     }
-//     result
 // }
 
-fn tiling(dims:(usize, usize), strats:&[MatrixStrategy]) -> Vec<usize> {
-    // returns reverse strategy
-    let (m, n) = dims;
 
-    let mut dp:Vec<(usize, usize, usize)> = vec![(0,0,0); m*n + 1];
-    let mut result:Vec<usize> = Vec::new();
-    for idx in 1..=m*n {
-        for (k, mat) in strats.iter().enumerate() {
-            println!("-----------------------");
-            println!("Strat {:?}", mat);
+impl PartialEq for Node {
+    // indifferent
+    fn eq(&self, other:&Self) -> bool {
+        self.cost == other.cost
+        && self.transposed == other.transposed
+    }
+}
 
-            let (mat_i, mat_j) = mat.dims;
-            let m_idx = (mat_i - 1)*n + mat_j ; 
-            let m_i = (m_idx-1) / n + 1;
-            let m_j = (m_idx-1) % n + 1;
-            // one based (i,j) for debug
-            println!("idx {}, m_idx {}", idx, m_idx);
-            if idx >= m_idx  && m_i <= m && m_j <= n{
-                println!("Mat ({},{}) translated to Tiling ({}, {})", mat_i, mat_j, m_i, m_j);
-                // println!("Cur ({}, {}) and inferred Prev ({},{})", mat_i, mat_j, _i, _j);
-                let _pre = idx - m_idx;
-                println!("preidx {:?}", _pre);
-                let _p_i = (_pre ) / n + 1;
-                let _p_j = (_pre ) % n + 1;
-                let _c_i = (idx - 1) / n + 1;
-                let _c_j = (idx - 1) % n + 1;
+impl Leaf {
+    fn new(cost:usize, m:usize, n:usize) -> Self {
+        Leaf{ cost, m, n }
+    }
+}
 
-                let (prev_cost, _, _) = dp[idx-m_idx];
-                let (curr_cost, _, _) = dp[idx];
-                if prev_cost + mat.cost < curr_cost || curr_cost == 0 {
-                    dp[idx] = (prev_cost + mat.cost, idx - m_idx, k);
-                }
+impl Partition {
+    fn cost(&self) -> usize {
+        match self {
+            Partition::Leaf(l) => l.cost,
+            Partition::Node(n) => n.cost,
+            Partition::None => usize::MAX,
+        }
+    }
+    fn merge(transposed:bool, left:Partition, right:Partition) -> Self {
+        if matches!(left, Partition::None) || matches!(right, Partition::None) {
+            return Partition::None;
+        }
+        let cost = left.cost() + right.cost();
+        return Partition::Node(Node {
+            cost,
+            transposed,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+}
+
+impl PartialEq for Partition {
+    fn eq(&self, other:&Self) -> bool {
+        self.cost() == other.cost()
+    }
+}
+
+fn tile(i:usize, j:usize, strats:&[Leaf]) -> Partition {
+    // let mut memo = vec![vec![None;j];i];
+    let mut memo:HashMap<(usize,usize), Partition> = HashMap::new();
+    solve(i, j, strats, &mut memo)
+}
+
+// fn solve(i:usize, j:usize, strats:&[Leaf], memo:&mut Vec<Vec<Option<Partition>>>) -> Partition {
+fn solve(
+    i:usize, j:usize,
+    strats:&[Leaf],
+    memo:&mut HashMap<(usize,usize), Partition>
+) -> Partition {
+    // if let Some(existing) = &memo[i-1][j-1] {
+    if let Some(existing) = memo.get(&(i, j)) {
+        return existing.clone()
+    }
+    for st in strats {
+        if st.m == i && st.n == j {
+            let result = Partition::Leaf(st.clone());
+            // memo[i-1][j-1] = Some(result.clone());
+            memo.insert((i,j), result.clone());
+            return Partition::Leaf(st.clone())
+        }
+    }
+    let mut best = Partition::None;
+    for st in strats {
+        if st.m > i || st.n > j {
+            continue;
+        }
+        // i, j are both 1 indexed so strictly less
+        if st.m < i {
+            let part_above = Partition::merge(
+                false,
+                solve(st.m, j, strats, memo),
+                solve(i - st.m, j, strats, memo),
+            );
+            if part_above.cost() < best.cost() {
+                best = part_above;
+            }
+        }
+        if st.n < j {
+            let part_left = Partition::merge(
+                true,
+                solve(i, j - st.n, strats, memo),
+                solve(i, st.n, strats, memo),
+            );
+            if part_left.cost() < best.cost() {
+                best = part_left;
             }
         }
     }
-    let mut idx = m*n;
-    println!("dp {:?}", dp);
-    while idx != 0 {
-        println!("----");
-        let (_, pre_idx, s_idx) = dp[idx];
-        println!("Dp {:?}", dp[idx]);
-        result.push(s_idx);
-        idx = pre_idx;
-    }
-    println!("result {:?}", result);
-    result
+    // memo[i-1][j-1] = Some(best.clone());
+    memo.insert((i,j), best.clone());
+    best 
 }
-
-fn print_strat_sequence(strats: &[MatrixStrategy], seq: &[usize]) {
-    for &idx in seq.iter().rev() {
-        let s = &strats[idx];
-        println!("Used: {}x{} (cost {})", s.dims.0, s.dims.1, s.cost);
-    }
-}
-
-fn test_tiling() {
-    let strats = vec![
-        MatrixStrategy { dims: (1, 1), cost: 2 },
-        MatrixStrategy { dims: (1, 2), cost: 3 },
-        MatrixStrategy { dims: (2, 1), cost: 3 },
-        MatrixStrategy { dims: (2, 2), cost: 4 },
-    ];
-
-    let dims_list = vec![
-        // (1, 1),
-        // (2, 1),
-        // (2, 2),
-        // (2, 3),
-        // (3, 3),
-        // (3, 4),
-    ];
-
-    for dims in dims_list {
-        println!("\nTesting matrix {}x{}...", dims.0, dims.1);
-        let seq = tiling(dims, &strats);
-        print_strat_sequence(&strats, &seq);
-    }
-}
-
-
 
 fn main() {
-    // println!("hello wrold");
-    test_tiling()
+    let strats = &[
+        Leaf::new(2, 1, 1),
+        Leaf::new(3, 2, 1),
+        Leaf::new(3, 1, 2),
+        Leaf::new(4, 2, 2),
+    ];
+
+    let dims = &[
+        (1,1),
+        (1,2),
+        (2,1),
+        (2,2),
+        (4,4),
+        (4,2),
+        (5, 4),
+    ];
+    
+    for (i, j) in dims {
+        println!("-----------------------");
+        println!("Solving (i: {},j: {})", i, j);
+        let result = tile(*i, *j, strats);
+        println!("-----------------------");
+        println!("-----------------------");
+        println!("{:?}", result);
+    }
+    // let p = Partition::Leaf(Leaf::new(2, 1, 1));
+    // let mut x = Partition::merge(false, p.clone(), p.clone());
+    // let mut y = Partition::merge(false, x.clone(), x.clone());
+    // println!("X {:?}", x);
+    // println!("Y {:?}", y);
+    // println!("---------");
+    // let mut y = Partition::merge(false, x.clone(), Partition::None);
+    // println!("X {:?}", x);
+    // println!("Y {:?}", y);
+
 }
