@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use std::fmt;
 use std::collections::HashMap;
 
 #[derive(Eq, Clone, Debug)]
@@ -23,14 +22,6 @@ struct Node {
     left: Box<Partition>,
     right:Box<Partition>,
 }
-
-
-// impl fmt::Debug for Partition {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(f, "Partition {{ cost: {} }}", self.cost())
-//     }
-// }
-
 
 impl PartialEq for Node {
     // indifferent
@@ -75,12 +66,10 @@ impl PartialEq for Partition {
 }
 
 fn tile(i:usize, j:usize, strats:&[Leaf]) -> Partition {
-    // let mut memo = vec![vec![None;j];i];
     let mut memo:HashMap<(usize,usize), Partition> = HashMap::new();
     solve(i, j, strats, &mut memo)
 }
 
-// fn solve(i:usize, j:usize, strats:&[Leaf], memo:&mut Vec<Vec<Option<Partition>>>) -> Partition {
 fn solve(
     i:usize, j:usize,
     strats:&[Leaf],
@@ -125,7 +114,6 @@ fn solve(
             }
         }
     }
-    // memo[i-1][j-1] = Some(best.clone());
     memo.insert((i,j), best.clone());
     best 
 }
